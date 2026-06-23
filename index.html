@@ -553,6 +553,26 @@
     }
 
     // ------------------------------------
+    // 残人数からの試合結果自動判定処理
+    // ------------------------------------
+    function autoJudgeGameResult() {
+        const myInner = parseInt(document.getElementById('my-inner-players').value) || 0;
+        const oppInner = parseInt(document.getElementById('opp-inner-players').value) || 0;
+        const resultSelect = document.getElementById('game-result');
+
+        if (myInner > oppInner) {
+            resultSelect.value = '勝';
+        } else if (myInner < oppInner) {
+            resultSelect.value = '負';
+        } else {
+            resultSelect.value = '引分';
+        }
+    }
+
+    document.getElementById('my-inner-players').oninput = autoJudgeGameResult;
+    document.getElementById('opp-inner-players').oninput = autoJudgeGameResult;
+
+    // ------------------------------------
     // 2. ボールキープ用ストップウォッチ処理
     // ------------------------------------
     let timerId = null;
@@ -742,7 +762,7 @@
             // 試合ごとのヘッダー情報
             rows.push(`【第 ${index + 1} 試合スタッツ】`);
             rows.push(`対戦相手,${game.opponent}`);
-            rows.push(`結果（味方-相手）,${resultStr}`);
+            rows.push(`結果（味方-相手）,${resultStr} (${game.gameResult})`);
             rows.push(`ボールキープ時間,${game.keepTime}秒`);
             rows.push(`備考,${memoCsv}`);
             rows.push(''); // 空行
