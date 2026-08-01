@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ドッジボール試合スタッツカウンター v3.3.0</title>
+    <title>ドッジボール試合スタッツカウンター v3.5.0</title>
     <style>
         :root {
             --primary-color: #1a73e8;
@@ -79,6 +79,18 @@
             cursor: pointer;
         }
         .btn-clear-storage:active { background-color: var(--danger-color); }
+
+        .btn-reset-screen {
+            background-color: #e0a800;
+            color: #212529;
+            border: none;
+            padding: 6px 10px;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-reset-screen:active { opacity: 0.8; }
 
         /* 試合情報入力エリア */
         .game-info-grid {
@@ -366,10 +378,11 @@
 <body>
 
 <div class="container">
-    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.3.0</span></h1>
+    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.5.0</span></h1>
 
     <div class="section-header">
         <div class="section-title" id="form-section-title">試合基本情報</div>
+        <button class="btn-reset-screen" id="btn-reset-screen" title="入力中の試合情報と全スタッツをクリアします">🔄 画面を全リセット</button>
     </div>
     <div class="game-info-grid">
         <div class="form-group full-width">
@@ -468,10 +481,12 @@
     for (let i = 1; i <= 20; i++) {
         // 保存されていた名前があれば復元、なければ空文字
         const initialName = savedPlayerNames[i] || '';
+        // 13番以降は初期出場チェックをOFF（背番号1〜12はON）
+        const defaultIsPlaying = i <= 12;
 
         playerStats[i] = {
             name: initialName,
-            isPlaying: true,
+            isPlaying: defaultIsPlaying,
             innerAT_success: 0, innerAT_fail: 0,
             outerAT_success: 0, outerAT_fail: 0,
             df_success: 0, df_fail: 0
@@ -508,7 +523,7 @@
         const playCheckbox = document.createElement('input');
         playCheckbox.type = 'checkbox';
         playCheckbox.id = `p-${i}-play-checkbox`;
-        playCheckbox.checked = true;
+        playCheckbox.checked = defaultIsPlaying;
         playCheckbox.onchange = () => { playerStats[i].isPlaying = playCheckbox.checked; };
         
         const playText = document.createTextNode('出場');
@@ -589,6 +604,29 @@
         playerStats[playerNum][key] = currentVal;
         document.getElementById(`p-${playerNum}-${type}-${status}`).textContent = currentVal;
     }
+
+    // 勝敗の自動判定ロジック
+    const myInnerInput = document.getElementById('my-inner-players');
+    const oppInnerInput = document.getElementById('opp-inner-players');
+    const gameResultSelect = document.getElementById('game-result');
+
+    function autoCalcGameResult() {
+        const myVal = parseInt(myInnerInput.value, 10);
+        const oppVal = parseInt(oppInnerInput.value, 10);
+
+        if (isNaN(myVal) || isNaN(oppVal)) return;
+
+        if (myVal > oppVal) {
+            gameResultSelect.value = '勝';
+        } else if (myVal < oppVal) {
+            gameResultSelect.value = '負';
+        } else {
+            gameResultSelect.value = '引分';
+        }
+    }
+
+    myInnerInput.oninput = autoCalcGameResult;
+    oppInnerInput.oninput = autoCalcGameResult;
 
     // ------------------------------------
     // 2. ボールキープ用ストップウォッチ処理
@@ -705,7 +743,7 @@
         document.getElementById('game-memo').value = '';
         swResetBtn.click(); // ストップウォッチリセット
 
-        // 各選手の入力数値を0にリセット (名前・出場チェックは直前状態を保持)
+        // 各選手の入力数値を0にリセット、13番以降はチェックOFFにリセット
         for (let i = 1; i <= 20; i++) {
             playerStats[i].innerAT_success = 0;
             playerStats[i].innerAT_fail = 0;
@@ -713,6 +751,10 @@
             playerStats[i].outerAT_fail = 0;
             playerStats[i].df_success = 0;
             playerStats[i].df_fail = 0;
+
+            const defaultIsPlaying = i <= 12;
+            playerStats[i].isPlaying = defaultIsPlaying;
+            document.getElementById(`p-${i}-play-checkbox`).checked = defaultIsPlaying;
 
             statTypes.forEach(stat => {
                 document.getElementById(`p-${i}-${stat.key}-success`).textContent = '0';
@@ -724,6 +766,20 @@
     // 編集キャンセルの処理
     document.getElementById('btn-cancel-edit').onclick = function() {
         resetFormToDefault();
+    };
+
+    // 画面の入力内容（スタッツ、選手名、試合基本情報）の全リセットボタン
+    document.getElementById('btn-reset-screen').onclick = function() {
+        if (confirm('画面上に入力されている現在の試合情報・スタッツ・選手名をすべて初期リセットしますか？\n（※保存済みの試合一覧データは削除されません）')) {
+            resetFormToDefault();
+            // 選手名のクリアとLocalStorageの初期化
+            for (let i = 1; i <= 20; i++) {
+                playerStats[i].name = '';
+                document.getElementById(`p-${i}-name-input`).value = '';
+            }
+            localStorage.removeItem('dodgeball_player_names');
+            alert('画面の入力内容を初期化しました。');
+        }
     };
 
     // 保存済み試合をフォームに読み込む関数
@@ -878,27 +934,26 @@
             rows.push(',,DF,DF,内野AT,内野AT,外野AT,外野AT');
             rows.push('背番号,選手名,○,×,○,×,○,×');
 
-            // 選手データ
+            // 選手データ（出場チェックがONの選手のみ出力）
             for (let i = 1; i <= 20; i++) {
                 const p = game.stats[i];
-                const nameCsv = `"${(p ? p.name || '' : '').replace(/"/g, '""')}"`;
                 
-                const df_succ    = (p && p.isPlaying) ? p.df_success      : '-';
-                const df_fail    = (p && p.isPlaying) ? p.df_fail         : '-';
-                const inner_succ = (p && p.isPlaying) ? p.innerAT_success : '-';
-                const inner_fail = (p && p.isPlaying) ? p.innerAT_fail    : '-';
-                const outer_succ = (p && p.isPlaying) ? p.outerAT_success : '-';
-                const outer_fail = (p && p.isPlaying) ? p.outerAT_fail    : '-';
+                // 出場チェックがOFF（またはデータ未定義）の場合は行ごとスキップ
+                if (!p || !p.isPlaying) {
+                    continue;
+                }
+
+                const nameCsv = `"${(p.name || '').replace(/"/g, '""')}"`;
 
                 rows.push([
                     i,
                     nameCsv,
-                    df_succ,
-                    df_fail,
-                    inner_succ,
-                    inner_fail,
-                    outer_succ,
-                    outer_fail
+                    p.df_success      || 0,
+                    p.df_fail         || 0,
+                    p.innerAT_success || 0,
+                    p.innerAT_fail    || 0,
+                    p.outerAT_success || 0,
+                    p.outerAT_fail    || 0
                 ].join(','));
             }
 
