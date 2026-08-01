@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ドッジボール試合スタッツカウンター v3.2</title>
+    <title>ドッジボール試合スタッツカウンター v3.3.0</title>
     <style>
         :root {
             --primary-color: #1a73e8;
@@ -42,6 +42,16 @@
             color: var(--primary-color);
             margin: 5px 0 15px 0;
             font-weight: bold;
+        }
+
+        .version-badge {
+            font-size: 0.8rem;
+            background: #e7f1ff;
+            color: var(--primary-color);
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin-left: 6px;
+            vertical-align: middle;
         }
 
         .section-header {
@@ -174,17 +184,23 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 8px;
-            max-height: 150px;
+            max-height: 200px;
             overflow-y: auto;
         }
         .game-item {
             display: flex;
             justify-content: space-between;
-            padding: 6px 8px;
+            align-items: center;
+            padding: 8px 8px;
             border-bottom: 1px solid var(--border-color);
             font-size: 0.9rem;
         }
         .game-item:last-child { border-bottom: none; }
+        .game-item-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
         .game-item .badge {
             padding: 2px 6px;
             border-radius: 4px;
@@ -194,6 +210,17 @@
         .badge-win { background: #d1e7dd; color: #0f5132; }
         .badge-lose { background: #f8d7da; color: #842029; }
         .badge-draw { background: #fff3cd; color: #664d03; }
+
+        .btn-item-action {
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn-edit-game { background-color: #ffc107; color: #212529; }
+        .btn-delete-game { background-color: #dc3545; color: white; }
 
         /* 選手スタッツ・スマホ快適レイアウト */
         .player-card {
@@ -313,7 +340,14 @@
         }
         .btn-save { background-color: var(--primary-color); margin-top: 10px; }
         .btn-save:active { background-color: #155cb4; }
+        .btn-save.editing { background-color: var(--warning-color); color: #212529; }
         
+        .btn-cancel-edit {
+            background-color: #6c757d;
+            margin-top: 6px;
+            display: none;
+        }
+
         .btn-csv { background-color: #198754; margin-top: 15px; font-size: 1.1rem; padding: 14px; }
         .btn-csv:active { background-color: #146c43; }
         .btn-csv:disabled { background-color: #6c757d; opacity: 0.65; cursor: not-allowed; box-shadow: none; }
@@ -332,10 +366,10 @@
 <body>
 
 <div class="container">
-    <h1>ドッジボール スタッツカウンター</h1>
+    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.3.0</span></h1>
 
     <div class="section-header">
-        <div class="section-title">試合基本情報</div>
+        <div class="section-title" id="form-section-title">試合基本情報</div>
     </div>
     <div class="game-info-grid">
         <div class="form-group full-width">
@@ -368,6 +402,7 @@
         </div>
         <div class="form-group full-width">
             <button class="btn-action btn-save" id="btn-save-game">💾 この試合を保存して次へ</button>
+            <button class="btn-action btn-cancel-edit" id="btn-cancel-edit">❌ 編集をキャンセル</button>
         </div>
     </div>
 
@@ -407,6 +442,9 @@
     
     // localStorage から試合履歴データをロード。無ければ空配列
     let savedGames = JSON.parse(localStorage.getItem('dodgeball_saved_games')) || [];
+
+    // 現在編集中の試合インデックス (-1 のときは新規登録モード)
+    let editingGameIndex = -1;
 
     // 選手名一覧を記憶させておくための仕組み
     const savedPlayerNames = JSON.parse(localStorage.getItem('dodgeball_player_names')) || {};
@@ -553,26 +591,6 @@
     }
 
     // ------------------------------------
-    // 残人数からの試合結果自動判定処理
-    // ------------------------------------
-    function autoJudgeGameResult() {
-        const myInner = parseInt(document.getElementById('my-inner-players').value) || 0;
-        const oppInner = parseInt(document.getElementById('opp-inner-players').value) || 0;
-        const resultSelect = document.getElementById('game-result');
-
-        if (myInner > oppInner) {
-            resultSelect.value = '勝';
-        } else if (myInner < oppInner) {
-            resultSelect.value = '負';
-        } else {
-            resultSelect.value = '引分';
-        }
-    }
-
-    document.getElementById('my-inner-players').oninput = autoJudgeGameResult;
-    document.getElementById('opp-inner-players').oninput = autoJudgeGameResult;
-
-    // ------------------------------------
     // 2. ボールキープ用ストップウォッチ処理
     // ------------------------------------
     let timerId = null;
@@ -642,7 +660,7 @@
             statsSnapshot[i] = { ...playerStats[i] };
         }
 
-        // 試合データをオブジェクト化してメモリに保存
+        // 試合データをオブジェクト化
         const gameData = {
             opponent,
             gameResult,
@@ -652,15 +670,34 @@
             gameMemo,
             stats: statsSnapshot
         };
-        savedGames.push(gameData);
+
+        if (editingGameIndex >= 0) {
+            // 既存データの更新
+            savedGames[editingGameIndex] = gameData;
+            alert(`第 ${editingGameIndex + 1} 試合（対 ${opponent}）のデータを更新しました。`);
+        } else {
+            // 新規追加
+            savedGames.push(gameData);
+            alert(`試合データ（対 ${opponent}）を保存しました。\nブラウザを更新してもデータは保持されます。`);
+        }
 
         // localStorageにデータを同期して保存
         localStorage.setItem('dodgeball_saved_games', JSON.stringify(savedGames));
 
-        // UIの「保存済み試合一覧」と「CSV出力ボタン」を更新
+        // フォームのリセット・UI更新
+        resetFormToDefault();
         updateSavedGamesUI();
+    };
 
-        // フォームのリセット（選手名と出場チェック以外の数値をリセット）
+    // フォームと入力バッファの初期化
+    function resetFormToDefault() {
+        editingGameIndex = -1;
+        document.getElementById('form-section-title').textContent = '試合基本情報';
+        const saveBtn = document.getElementById('btn-save-game');
+        saveBtn.textContent = '💾 この試合を保存して次へ';
+        saveBtn.classList.remove('editing');
+        document.getElementById('btn-cancel-edit').style.display = 'none';
+
         document.getElementById('opponent').value = '';
         document.getElementById('game-result').selectedIndex = 0;
         document.getElementById('my-inner-players').value = '0';
@@ -668,8 +705,8 @@
         document.getElementById('game-memo').value = '';
         swResetBtn.click(); // ストップウォッチリセット
 
+        // 各選手の入力数値を0にリセット (名前・出場チェックは直前状態を保持)
         for (let i = 1; i <= 20; i++) {
-            // カウントデータのみ0に戻す
             playerStats[i].innerAT_success = 0;
             playerStats[i].innerAT_fail = 0;
             playerStats[i].outerAT_success = 0;
@@ -677,15 +714,80 @@
             playerStats[i].df_success = 0;
             playerStats[i].df_fail = 0;
 
-            // 画面の数表示を0にする
             statTypes.forEach(stat => {
                 document.getElementById(`p-${i}-${stat.key}-success`).textContent = '0';
                 document.getElementById(`p-${i}-${stat.key}-fail`).textContent = '0';
             });
         }
+    }
 
-        alert(`試合データ（対 ${opponent}）を保存しました。\nブラウザを更新してもデータは保持されます。`);
+    // 編集キャンセルの処理
+    document.getElementById('btn-cancel-edit').onclick = function() {
+        resetFormToDefault();
     };
+
+    // 保存済み試合をフォームに読み込む関数
+    function editGame(index) {
+        const game = savedGames[index];
+        if (!game) return;
+
+        editingGameIndex = index;
+        document.getElementById('form-section-title').textContent = `試合基本情報 (第 ${index + 1} 試合を編集中)`;
+        
+        const saveBtn = document.getElementById('btn-save-game');
+        saveBtn.textContent = '✏️ 編集内容を上書き保存';
+        saveBtn.classList.add('editing');
+        document.getElementById('btn-cancel-edit').style.display = 'block';
+
+        // 基本情報の読み込み
+        document.getElementById('opponent').value = game.opponent;
+        document.getElementById('game-result').value = game.gameResult;
+        document.getElementById('my-inner-players').value = game.myInner;
+        document.getElementById('opp-inner-players').value = game.oppInner;
+        document.getElementById('keep-time').value = game.keepTime;
+        document.getElementById('game-memo').value = game.gameMemo || '';
+
+        // ストップウォッチ表示のみ同期
+        const sec = parseInt(game.keepTime, 10) || 0;
+        const mins = Math.floor(sec / 60);
+        const secs = sec % 60;
+        swDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.0`;
+
+        // 選手スタッツの復元
+        for (let i = 1; i <= 20; i++) {
+            if (game.stats && game.stats[i]) {
+                const st = game.stats[i];
+                playerStats[i] = { ...st };
+
+                // UIの復元
+                document.getElementById(`p-${i}-name-input`).value = st.name || '';
+                document.getElementById(`p-${i}-play-checkbox`).checked = (st.isPlaying !== false);
+
+                statTypes.forEach(stat => {
+                    document.getElementById(`p-${i}-${stat.key}-success`).textContent = st[`${stat.key}_success`] || 0;
+                    document.getElementById(`p-${i}-${stat.key}-fail`).textContent = st[`${stat.key}_fail`] || 0;
+                });
+            }
+        }
+
+        // 上部フォームへスクロール
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 一個の試合を削除する処理
+    function deleteGame(index) {
+        const game = savedGames[index];
+        if (confirm(`第 ${index + 1} 試合（vs ${game.opponent}）のデータを削除してよろしいですか？`)) {
+            savedGames.splice(index, 1);
+            localStorage.setItem('dodgeball_saved_games', JSON.stringify(savedGames));
+            if (editingGameIndex === index) {
+                resetFormToDefault();
+            } else if (editingGameIndex > index) {
+                editingGameIndex--;
+            }
+            updateSavedGamesUI();
+        }
+    }
 
     // 保存済み試合一覧エリアの描画更新
     function updateSavedGamesUI() {
@@ -709,8 +811,14 @@
             if (game.gameResult === '負') badgeClass = 'badge-lose';
 
             item.innerHTML = `
-                <span><strong>第 ${index + 1} 試合</strong>: vs ${game.opponent} (${game.myInner}-${game.oppInner})</span>
-                <span class="badge ${badgeClass}">${game.gameResult}</span>
+                <div>
+                    <strong>第 ${index + 1} 試合</strong>: vs ${game.opponent} (${game.myInner}-${game.oppInner})
+                    <span class="badge ${badgeClass}">${game.gameResult}</span>
+                </div>
+                <div class="game-item-actions">
+                    <button class="btn-item-action btn-edit-game" onclick="editGame(${index})">編集</button>
+                    <button class="btn-item-action btn-delete-game" onclick="deleteGame(${index})">削除</button>
+                </div>
             `;
             listContainer.appendChild(item);
         });
@@ -739,6 +847,7 @@
                 localStorage.removeItem('dodgeball_saved_games');
                 
                 // UIをリセット
+                resetFormToDefault();
                 updateSavedGamesUI();
                 alert('すべての試合データをクリアしました。');
             }
@@ -757,12 +866,12 @@
         // 保存されている試合を1つずつループしてブロック出力
         savedGames.forEach((game, index) => {
             const resultStr = `${game.myInner}-${game.oppInner}`;
-            const memoCsv = `"${game.gameMemo.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+            const memoCsv = `"${(game.gameMemo || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
 
             // 試合ごとのヘッダー情報
             rows.push(`【第 ${index + 1} 試合スタッツ】`);
             rows.push(`対戦相手,${game.opponent}`);
-            rows.push(`結果（味方-相手）,${resultStr} (${game.gameResult})`);
+            rows.push(`結果（見方-相手）,${resultStr} (${game.gameResult})`);
             rows.push(`ボールキープ時間,${game.keepTime}秒`);
             rows.push(`備考,${memoCsv}`);
             rows.push(''); // 空行
@@ -772,14 +881,14 @@
             // 選手データ
             for (let i = 1; i <= 20; i++) {
                 const p = game.stats[i];
-                const nameCsv = `"${(p.name || '').replace(/"/g, '""')}"`;
+                const nameCsv = `"${(p ? p.name || '' : '').replace(/"/g, '""')}"`;
                 
-                const df_succ    = p.isPlaying ? p.df_success      : '-';
-                const df_fail    = p.isPlaying ? p.df_fail         : '-';
-                const inner_succ = p.isPlaying ? p.innerAT_success : '-';
-                const inner_fail = p.isPlaying ? p.innerAT_fail    : '-';
-                const outer_succ = p.isPlaying ? p.outerAT_success : '-';
-                const outer_fail = p.isPlaying ? p.outerAT_fail    : '-';
+                const df_succ    = (p && p.isPlaying) ? p.df_success      : '-';
+                const df_fail    = (p && p.isPlaying) ? p.df_fail         : '-';
+                const inner_succ = (p && p.isPlaying) ? p.innerAT_success : '-';
+                const inner_fail = (p && p.isPlaying) ? p.innerAT_fail    : '-';
+                const outer_succ = (p && p.isPlaying) ? p.outerAT_success : '-';
+                const outer_fail = (p && p.isPlaying) ? p.outerAT_fail    : '-';
 
                 rows.push([
                     i,
