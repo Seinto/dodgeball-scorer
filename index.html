@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ドッジボール試合スタッツカウンター v3.7.0</title>
+    <title>ドッジボール試合スタッツカウンター v3.7.1</title>
     <style>
         :root {
             --primary-color: #1a73e8;
@@ -378,7 +378,7 @@
 <body>
 
 <div class="container">
-    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.7.0</span></h1>
+    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.7.1</span></h1>
 
     <div class="section-header">
         <div class="section-title" id="form-section-title">試合基本情報</div>
@@ -748,7 +748,7 @@
         document.getElementById('game-memo').value = '';
         swResetBtn.click(); // ストップウォッチリセット
 
-        // 各選手の入力数値を0にリセット、13番以降はチェックOFFにリセット
+        // 各選手の入力数値を0にリセット。選手名がある選手は出場チェックをONに、名前が無い選手はOFFにリセット
         for (let i = 1; i <= 20; i++) {
             playerStats[i].innerAT_success = 0;
             playerStats[i].innerAT_fail = 0;
@@ -757,7 +757,7 @@
             playerStats[i].df_success = 0;
             playerStats[i].df_fail = 0;
 
-            const defaultIsPlaying = false;
+            const defaultIsPlaying = playerStats[i].name.trim() !== '';
             playerStats[i].isPlaying = defaultIsPlaying;
             document.getElementById(`p-${i}-play-checkbox`).checked = defaultIsPlaying;
 
