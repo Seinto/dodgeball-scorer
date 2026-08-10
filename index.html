@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ドッジボール試合スタッツカウンター v3.6.0</title>
+    <title>ドッジボール試合スタッツカウンター v3.7.0</title>
     <style>
         :root {
             --primary-color: #1a73e8;
@@ -378,7 +378,7 @@
 <body>
 
 <div class="container">
-    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.6.0</span></h1>
+    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.7.0</span></h1>
 
     <div class="section-header">
         <div class="section-title" id="form-section-title">試合基本情報</div>
@@ -481,8 +481,8 @@
     for (let i = 1; i <= 20; i++) {
         // 保存されていた名前があれば復元、なければ空文字
         const initialName = savedPlayerNames[i] || '';
-        // 13番以降は初期出場チェックをOFF（背番号1〜12はON）
-        const defaultIsPlaying = i <= 12;
+        // デフォルトは出場チェックOFF（選手名が入力されると自動でONになる）
+        const defaultIsPlaying = false;
 
         playerStats[i] = {
             name: initialName,
@@ -511,12 +511,6 @@
         nameInput.id = `p-${i}-name-input`;
         nameInput.style.cssText = 'font-size:0.85rem;padding:3px 6px;border:1px solid #a0b4d0;border-radius:4px;width:90px;font-weight:normal;color:#333;';
         
-        // 名前が変更されたらメモリとlocalStorageの両方を更新
-        nameInput.oninput = () => { 
-            playerStats[i].name = nameInput.value; 
-            savePlayerNamesToStorage();
-        };
-        
         const playStatusLabel = document.createElement('label');
         playStatusLabel.className = 'play-status-label';
         
@@ -525,6 +519,17 @@
         playCheckbox.id = `p-${i}-play-checkbox`;
         playCheckbox.checked = defaultIsPlaying;
         playCheckbox.onchange = () => { playerStats[i].isPlaying = playCheckbox.checked; };
+
+        // 名前が変更されたらメモリとlocalStorageの両方を更新
+        // 選手名が入力されたら自動的に出場チェックをONにする
+        nameInput.oninput = () => { 
+            playerStats[i].name = nameInput.value; 
+            savePlayerNamesToStorage();
+            if (nameInput.value.trim() !== '' && !playCheckbox.checked) {
+                playCheckbox.checked = true;
+                playerStats[i].isPlaying = true;
+            }
+        };
         
         const playText = document.createTextNode('出場');
         
@@ -752,7 +757,7 @@
             playerStats[i].df_success = 0;
             playerStats[i].df_fail = 0;
 
-            const defaultIsPlaying = i <= 12;
+            const defaultIsPlaying = false;
             playerStats[i].isPlaying = defaultIsPlaying;
             document.getElementById(`p-${i}-play-checkbox`).checked = defaultIsPlaying;
 
