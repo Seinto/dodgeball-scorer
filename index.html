@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ドッジボール試合スタッツカウンター v3.5.0</title>
+    <title>ドッジボール試合スタッツカウンター v3.6.0</title>
     <style>
         :root {
             --primary-color: #1a73e8;
@@ -378,7 +378,7 @@
 <body>
 
 <div class="container">
-    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.5.0</span></h1>
+    <h1>ドッジボール スタッツカウンター <span class="version-badge">v3.6.0</span></h1>
 
     <div class="section-header">
         <div class="section-title" id="form-section-title">試合基本情報</div>
@@ -934,16 +934,26 @@
             rows.push(',,DF,DF,内野AT,内野AT,外野AT,外野AT');
             rows.push('背番号,選手名,○,×,○,×,○,×');
 
-            // 選手データ（出場チェックがONの選手のみ出力）
+            // 選手データ（データが存在する選手のみ出力。出場チェックがOFFの選手は全スタッツを"-"で出力）
             for (let i = 1; i <= 20; i++) {
                 const p = game.stats[i];
-                
-                // 出場チェックがOFF（またはデータ未定義）の場合は行ごとスキップ
-                if (!p || !p.isPlaying) {
+
+                // データ未定義の場合は行ごとスキップ
+                if (!p) {
                     continue;
                 }
 
                 const nameCsv = `"${(p.name || '').replace(/"/g, '""')}"`;
+
+                if (!p.isPlaying) {
+                    // 出場していない選手は全スタッツを"-"にする
+                    rows.push([
+                        i,
+                        nameCsv,
+                        '-', '-', '-', '-', '-', '-'
+                    ].join(','));
+                    continue;
+                }
 
                 rows.push([
                     i,
