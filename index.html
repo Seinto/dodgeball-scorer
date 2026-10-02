@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dodgeball Stats 2</title>
+
+    <!-- iOSホーム画面用アイコンおよびWebアプリ設定 -->
+    <link rel="apple-touch-icon" href="icon-512.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Dodge Stats">
+
+
+    <style>
+        :root {
+            --ios-bg: #f5f5f7;
+            --ios-card-bg: #ffffff;
+            --ios-text: #1d1d1f;
+            --ios-secondary: #86868b;
+            --ios-blue: #0071e3;
+            --ios-green: #34c759;
+            --ios-red: #ff3b30;
+            --ios-border: #d2d2d7;
+            --ios-separator: #e5e5e7;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--ios-bg);
+            color: var(--ios-text);
+            margin: 0;
+            padding: 12px;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 680px;
+            margin: 0 auto;
+            padding-bottom: 90px;
+        }
+
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin: 10px 4px 16px 4px;
+        }
+        h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--ios-text);
+            margin: 0;
+            letter-spacing: -0.01em;
+        }
+        .version-badge {
+            font-size: 0.7rem;
+            color: var(--ios-secondary);
+            background: #e5e5ea;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 4px 8px 4px;
+        }
+
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ios-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .ios-card {
+            background: var(--ios-card-bg);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0,0,0,0.02);
+        }
+
+        .game-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { font-size: 0.75rem; font-weight: 500; color: var(--ios-secondary); margin-bottom: 4px; }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px; border: 1px solid var(--ios-border); border-radius: 8px;
+            font-size: 0.9rem; background-color: #fafafa; outline: none; transition: border 0.2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--ios-blue); background-color: #fff;
+        }
+        input[type="number"] {
+            color: var(--ios-text);
+        }
+        input[type="number"].is-zero {
+            color: #c7c7cc;
+        }
+
+        .form-group textarea { resize: vertical; min-height: 40px; font-family: inherit; }
+
+        .ios-btn {
+            background-color: var(--ios-blue); color: white; border: none;
+            padding: 12px; font-size: 0.9rem; font-weight: 500; border-radius: 8px;
+            cursor: pointer; width: 100%; text-align: center; transition: opacity 0.2s;
+        }
+        .ios-btn:active { opacity: 0.7; }
+        .ios-btn.secondary { background-color: #e5e5ea; color: var(--ios-text); }
+        .ios-btn.danger { background-color: var(--ios-red); }
+        .ios-btn.warning { background-color: #ff9f0a; color: white; }
+
+        .btn-row { display: flex; gap: 8px; margin-top: 10px; }
+
+        .player-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding-bottom: 10px; border-bottom: 1px solid var(--ios-separator);
+            margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+        }
+        .player-id-name { display: flex; align-items: center; gap: 8px; }
+        .player-num { font-weight: 600; font-size: 0.9rem; color: var(--ios-secondary); width: 28px; }
+        .player-name-input {
+            border: none; background: #fafafa; font-size: 0.95rem; font-weight: 500;
+            width: 110px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--ios-border);
+        }
+        .player-name-input:focus { background: var(--ios-bg); outline: none; border-color: var(--ios-blue); }
+
+        .player-toggles { display: flex; gap: 12px; align-items: center; }
+        .ios-checkbox-label {
+            font-size: 0.8rem; font-weight: 500; color: var(--ios-secondary);
+            display: flex; align-items: center; gap: 4px; cursor: pointer;
+        }
+        .ios-checkbox-label.active-star { color: #af52de; font-weight: 600; }
+
+        .stat-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 0; border-bottom: 1px solid #f2f2f7;
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-label { font-size: 0.85rem; font-weight: 500; width: 60px; }
+
+        .counter-group { display: flex; align-items: center; gap: 12px; }
+        .counter-box { display: flex; align-items: center; gap: 4px; }
+        .counter-title { font-size: 0.75rem; font-weight: 600; }
+        .counter-title.succ { color: var(--ios-green); }
+        .counter-title.fail { color: var(--ios-red); }
+
+        .c-btn {
+            width: 26px; height: 26px; border-radius: 50%; border: none;
+            background: #e5e5ea; font-weight: 600; font-size: 0.9rem;
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .c-btn:active { background: #d1d1d6; }
+        .c-value { font-size: 0.95rem; font-weight: 600; min-width: 16px; text-align: center; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: none; justify-content: center; align-items: center;
+            z-index: 2000; padding: 16px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-card {
+            background: #fff; width: 100%; max-width: 420px; max-height: 85vh;
+            border-radius: 16px; padding: 20px; overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            animation: modalUp 0.25s ease-out;
+        }
+        @keyframes modalUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-title { font-size: 1rem; font-weight: 600; margin-bottom: 12px; color: var(--ios-text); border-bottom: 1px solid var(--ios-separator); padding-bottom: 8px; }
+        
+        .sub-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px;
+        }
+        .sub-item {
+            background: #f9f9fb; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--ios-separator);
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem;
+        }
+        .sub-item-name { font-weight: 500; color: var(--ios-secondary); }
+        .sub-controls { display: flex; align-items: center; gap: 6px; }
+        .sub-c-btn {
+            width: 26px; height: 26px; border-radius: 50%; border: none; background: #e5e5ea;
+            font-size: 0.9rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .sub-c-val { font-weight: 600; min-width: 16px; text-align: center; }
+
+        .stopwatch-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--ios-separator);
+            padding: 10px 16px; display: flex; align-items: center; justify-content: space-between;
+            z-index: 1000; box-shadow: 0 -4px 16px rgba(0,0,0,0.04);
+        }
+        .sw-time { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 1.2rem; font-weight: 600; }
+        .sw-controls { display: flex; gap: 6px; }
+        .sw-btn { padding: 8px 12px; font-size: 0.75rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; }
+
+        .saved-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; border-bottom: 1px solid var(--ios-separator); font-size: 0.85rem;
+        }
+        .saved-item:last-child { border-bottom: none; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
+        .badge-win { background: #e8f8ed; color: var(--ios-green); }
+        .badge-lose { background: #fdeeea; color: var(--ios-red); }
+        .badge-draw { background: #fef6e7; color: #ff9f0a; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="app-header">
+        <h1>Dodgeball Stats 2</h1>
+        <span class="version-badge">v1.2.5</span>
+    </div>
+
+    <!-- 試合情報 -->
+    <div class="section-header">
+        <span class="section-title" id="form-title">試合基本情報</span>
+        <button class="ios-btn secondary" style="width: auto; padding: 4px 10px; font-size: 0.75rem;" id="btn-reset-screen">リセット</button>
+    </div>
+    <div class="ios-card">
+        <div class="game-info-grid">
+            <div class="form-group full">
+                <label>対戦相手</label>
+                <input type="text" id="opponent" placeholder="チーム名" tabindex="1">
+            </div>
+            <div class="form-group full">
+                <label>試合結果</label>
+                <select id="game-result" tabindex="-1">
+                    <option value="勝">🏆 勝利 (WIN)</option>
+                    <option value="負">😢 敗北 (LOSE)</option>
+                    <option value="引分">🤝 引分 (DRAW)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>自内野残</label>
+                <input type="number" id="my-inner" min="0" max="20" value="0" tabindex="2">
+            </div>
+            <div class="form-group">
+                <label>相手内野残</label>
+                <input type="number" id="opp-inner" min="0" max="20" value="0" tabindex="3">
+            </div>
+            <div class="form-group full">
+                <label>キープ時間 (秒)</label>
+                <input type="number" id="keep-time" min="0" value="0" tabindex="4">
+            </div>
+            <div class="form-group full">
+                <label>備考</label>
+                <textarea id="game-memo" placeholder="メモを入力..." tabindex="5"></textarea>
+            </div>
+        </div>
+        <div class="btn-row">
+            <button class="ios-btn" id="btn-save-game">この試合を保存して次へ</button>
+            <button class="ios-btn secondary" id="btn-cancel-edit" style="display:none; width: 120px;">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- 保存済みリスト -->
+    <div class="section-header">
+        <span class="section-title">保存された試合</span>
+        <button class="ios-btn secondary" style="width: auto; padding: 4px 10px; font-size: 0.75rem;" id="btn-clear-all">全消去</button>
+    </div>
+    <div class="ios-card" id="saved-games-container" style="max-height: 150px; overflow-y: auto;">
+        <div style="color: var(--ios-secondary); text-align: center; font-size: 0.8rem; padding: 10px;">記録なし</div>
+    </div>
+
+    <!-- CSV出力ボタン -->
+    <div style="display: flex; gap: 8px; margin-bottom: 20px;">
+        <button class="ios-btn" id="btn-export-team-csv" disabled style="background-color: var(--ios-green); flex: 1;">全体スタッツ出力 (0件)</button>
+        <button class="ios-btn" id="btn-export-detail-csv" disabled style="background-color: #af52de; flex: 1;">個人詳細出力 (0件)</button>
+    </div>
+
+    <!-- 選手スタッツ -->
+    <div class="section-header">
+        <span class="section-title">選手別スタッツ (1〜20)</span>
+    </div>
+    <div id="players-container"></div>
+</div>
+
+<!-- 単一項目用詳細入力モーダル -->
+<div class="modal-overlay" id="detail-modal">
+    <div class="modal-card">
+        <div class="modal-title" id="modal-title-text">詳細内訳</div>
+        <div id="modal-body-content"></div>
+        <div style="margin-top: 16px;">
+            <button class="ios-btn" onclick="closeModal()">完了</button>
+        </div>
+    </div>
+</div>
+
+<!-- ストップウォッチ固定バー -->
+<div class="stopwatch-bar">
+    <div class="sw-time" id="sw-display">00:00.0</div>
+    <div class="sw-controls">
+        <button class="sw-btn ios-btn" id="sw-start">スタート</button>
+        <button class="sw-btn ios-btn secondary" id="sw-reset">リセット</button>
+    </div>
+</div>
+
+<script>
+    const playersContainer = document.getElementById('players-container');
+    const playerStats = {};
+    let savedGames = JSON.parse(localStorage.getItem('ios_dodgeball_games_v6')) || [];
+    let savedNames = JSON.parse(localStorage.getItem('ios_dodgeball_names_v6')) || {};
+    let editingIndex = -1;
+
+    const partsStandard = ['正面', '足元', '肩', '腕'];
+    const partsDFSucc = ['正面', '足元', '肩', '腕', 'ヘッド'];
+    const partsATFail = ['正面', '足元', '肩', '腕', 'ワンバン', 'カット', 'パスミス', 'ヘッド'];
+
+    const statLabelsMap = {
+        innerAT: '内野AT',
+        outerAT: '外野AT',
+        df: 'DF'
+    };
+
+    function saveNamesToStorage() {
+        const names = {};
+        for(let i=1; i<=20; i++) names[i] = playerStats[i].name;
+        localStorage.setItem('ios_dodgeball_names_v6', JSON.stringify(names));
+    }
+
+    for (let i = 1; i <= 20; i++) {
+        const name = savedNames[i] || '';
+        playerStats[i] = {
+            name: name,
+            isPlaying: false,
+            isSpecial: false,
+            innerAT: { success: 0, fail: 0 },
+            outerAT: { success: 0, fail: 0 },
+            df: { success: 0, fail: 0 },
+            details: {
+                innerAT: {
+                    success: { 正面:0, 足元:0, 肩:0, 腕:0 },
+                    fail:    { 正面:0, 足元:0, 肩:0, 腕:0, ワンバン:0, カット:0, パスミス:0, ヘッド:0 }
+                },
+                outerAT: {
+                    success: { 正面:0, 足元:0, 肩:0, 腕:0 },
+                    fail:    { 正面:0, 足元:0, 肩:0, 腕:0, ワンバン:0, カット:0, パスミス:0, ヘッド:0 }
+                },
+                df: {
+                    success: { 正面:0, 足元:0, 肩:0, 腕:0, ヘッド:0 },
+                    fail:    { 正面:0, 足元:0, 肩:0, 腕:0 }
+                }
+            }
+        };
+
+        const card = document.createElement('div');
+        card.className = 'ios-card';
+
+        const header = document.createElement('div');
+        header.className = 'player-header';
+        
+        const leftDiv = document.createElement('div');
+        leftDiv.className = 'player-id-name';
+        const numSpan = document.createElement('span');
+        numSpan.className = 'player-num';
+        numSpan.textContent = `#${i}`;
+        
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'player-name-input';
+        nameInput.placeholder = '名前';
+        nameInput.value = name;
+        nameInput.tabIndex = 10 + i;
+        
+        nameInput.oninput = () => {
+            playerStats[i].name = nameInput.value;
+            saveNamesToStorage();
+            if(nameInput.value.trim() !== '' && !playCheck.checked) {
+                playCheck.checked = true;
+                playerStats[i].isPlaying = true;
+            }
+        };
+        leftDiv.appendChild(numSpan);
+        leftDiv.appendChild(nameInput);
+
+        const rightDiv = document.createElement('div');
+        rightDiv.className = 'player-toggles';
+
+        const playLabel = document.createElement('label');
+        playLabel.className = 'ios-checkbox-label';
+        const playCheck = document.createElement('input');
+        playCheck.type = 'checkbox';
+        playCheck.tabIndex = -1;
+        playCheck.onchange = () => { playerStats[i].isPlaying = playCheck.checked; };
+        playLabel.appendChild(playCheck);
+        playLabel.appendChild(document.createTextNode('出場'));
+
+        const starLabel = document.createElement('label');
+        starLabel.className = 'ios-checkbox-label';
+        starLabel.id = `star-label-${i}`;
+        const starCheck = document.createElement('input');
+        starCheck.type = 'checkbox';
+        starCheck.tabIndex = -1;
+        starCheck.onchange = () => {
+            playerStats[i].isSpecial = starCheck.checked;
+            if(starCheck.checked) {
+                starLabel.classList.add('active-star');
+            } else {
+                starLabel.classList.remove('active-star');
+            }
+        };
+        starLabel.appendChild(starCheck);
+        starLabel.appendChild(document.createTextNode('⭐詳細'));
+
+        rightDiv.appendChild(playLabel);
+        rightDiv.appendChild(starLabel);
+        header.appendChild(leftDiv);
+        header.appendChild(rightDiv);
+        card.appendChild(header);
+
+        const statsConfig = [
+            { key: 'innerAT', label: '内野AT' },
+            { key: 'outerAT', label: '外野AT' },
+            { key: 'df', label: 'DF' }
+        ];
+
+        statsConfig.forEach(stat => {
+            const row = document.createElement('div');
+            row.className = 'stat-row';
+            
+            const lbl = document.createElement('div');
+            lbl.className = 'stat-label';
+            lbl.textContent = stat.label;
+            row.appendChild(lbl);
+
+            const group = document.createElement('div');
+            group.className = 'counter-group';
+
+            group.appendChild(createCounterEl(i, stat.key, 'success', '〇 成功'));
+            group.appendChild(createCounterEl(i, stat.key, 'fail', '× 失敗'));
+
+            row.appendChild(group);
+            card.appendChild(row);
+        });
+
+        playersContainer.appendChild(card);
+    }
+
+    function createCounterEl(playerNum, statKey, status, titleText) {
+        const box = document.createElement('div');
+        box.className = 'counter-box';
+
+        const title = document.createElement('span');
+        title.className = `counter-title ${status === 'success' ? 'succ' : 'fail'}`;
+        title.textContent = titleText;
+
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'c-btn';
+        minusBtn.textContent = '−';
+        minusBtn.tabIndex = -1;
+        minusBtn.onclick = () => {
+            updateBaseStat(playerNum, statKey, status, -1);
+        };
+
+        const valSpan = document.createElement('span');
+        valSpan.className = 'c-value';
+        valSpan.id = `p-${playerNum}-${statKey}-${status}`;
+        valSpan.textContent = '0';
+
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'c-btn';
+        plusBtn.textContent = '+';
+        plusBtn.tabIndex = -1;
+        plusBtn.onclick = () => {
+            if (playerStats[playerNum].isSpecial) {
+                openSpecificModal(playerNum, statKey, status);
+            } else {
+                updateBaseStat(playerNum, statKey, status, 1);
+            }
+        };
+
+        box.appendChild(title);
+        box.appendChild(minusBtn);
+        box.appendChild(valSpan);
+        box.appendChild(plusBtn);
+        return box;
+    }
+
+    function updateBaseStat(playerNum, statKey, status, delta) {
+        let current = playerStats[playerNum][statKey][status] + delta;
+        if(current < 0) current = 0;
+        playerStats[playerNum][statKey][status] = current;
+        document.getElementById(`p-${playerNum}-${statKey}-${status}`).textContent = current;
+    }
+
+    function openSpecificModal(playerNum, statKey, status) {
+        const p = playerStats[playerNum];
+        const statName = statLabelsMap[statKey];
+        const statusName = status === 'success' ? '成功' : '失敗';
+        
+        document.getElementById('modal-title-text').textContent = `#${playerNum} ${p.name || '選手'} - ${statName} (${statusName}) 内訳`;
+        
+        let items = partsStandard;
+        if (statKey !== 'df' && status === 'fail') {
+            items = partsATFail;
+        } else if (statKey === 'df' && status === 'success') {
+            items = partsDFSucc;
+        }
+        
+        let html = `<div class="sub-grid">`;
+        items.forEach(it => {
+            if(p.details[statKey][status][it] === undefined) {
+                p.details[statKey][status][it] = 0;
+            }
+            const val = p.details[statKey][status][it];
+            html += `
+                <div class="sub-item">
+                    <span class="sub-item-name">${it}</span>
+                    <div class="sub-controls">
+                        <button class="sub-c-btn" tabindex="-1" onclick="updateDetailCount(${playerNum}, '${statKey}', '${status}', '${it}', -1)">−</button>
+                        <span class="sub-c-val" id="mod-${playerNum}-${statKey}-${status}-${it}">${val}</span>
+                        <button class="sub-c-btn" tabindex="-1" onclick="updateDetailCount(${playerNum}, '${statKey}', '${status}', '${it}', 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+        html += `</div>`;
+
+        document.getElementById('modal-body-content').innerHTML = html;
+        document.getElementById('detail-modal').classList.add('active');
+    }
+
+    function updateDetailCount(playerNum, statKey, status, item, delta) {
+        let p = playerStats[playerNum];
+        if(p.details[statKey][status][item] === undefined) p.details[statKey][status][item] = 0;
+        let current = p.details[statKey][status][item] + delta;
+        if(current < 0) current = 0;
+        p.details[statKey][status][item] = current;
+        
+        const el = document.getElementById(`mod-${playerNum}-${statKey}-${status}-${item}`);
+        if(el) el.textContent = current;
+
+        let itemsList = partsStandard;
+        if (statKey !== 'df' && status === 'fail') {
+            itemsList = partsATFail;
+        } else if (statKey === 'df' && status === 'success') {
+            itemsList = partsDFSucc;
+        }
+
+        let total = 0;
+        itemsList.forEach(it => {
+            total += (p.details[statKey][status][it] || 0);
+        });
+        p[statKey][status] = total;
+        document.getElementById(`p-${playerNum}-${statKey}-${status}`).textContent = total;
+    }
+
+    function closeModal() {
+        document.getElementById('detail-modal').classList.remove('active');
+    }
+
+    const numInputs = [document.getElementById('my-inner'), document.getElementById('opp-inner'), document.getElementById('keep-time')];
+    
+    numInputs.forEach(input => {
+        function updateZeroStyle() {
+            if(input.value === '0' || input.value === '') {
+                input.classList.add('is-zero');
+            } else {
+                input.classList.remove('is-zero');
+            }
+        }
+        
+        input.addEventListener('focus', () => {
+            if(input.value === '0') {
+                input.value = '';
+            }
+        });
+
+        input.addEventListener('blur', () => {
+            if(input.value === '') {
+                input.value = '0';
+            }
+            updateZeroStyle();
+        });
+
+        input.addEventListener('input', () => {
+            updateZeroStyle();
+        });
+
+        updateZeroStyle();
+    });
+
+    const myInp = document.getElementById('my-inner');
+    const oppInp = document.getElementById('opp-inner');
+    const resSel = document.getElementById('game-result');
+    function autoResult() {
+        const m = parseInt(myInp.value) || 0;
+        const o = parseInt(oppInp.value) || 0;
+        if(m > o) resSel.value = '勝';
+        else if(m < o) resSel.value = '負';
+        else resSel.value = '引分';
+    }
+    myInp.oninput = (e) => { autoResult(); e.target.dispatchEvent(new Event('input')); };
+    oppInp.oninput = (e) => { autoResult(); e.target.dispatchEvent(new Event('input')); };
+
+    let timer = null, startTime = 0, elapsed = 0, running = false;
+    const swStart = document.getElementById('sw-start');
+    const swReset = document.getElementById('sw-reset');
+    const swDisplay = document.getElementById('sw-display');
+    const keepTimeInp = document.getElementById('keep-time');
+
+    swStart.onclick = () => {
+        if(!running) {
+            running = true;
+            swStart.textContent = 'ストップ';
+            swStart.classList.add('warning');
+            startTime = Date.now() - elapsed;
+            timer = setInterval(() => {
+                elapsed = Date.now() - startTime;
+                let sec = elapsed / 1000;
+                let m = Math.floor(sec / 60);
+                let s = Math.floor(sec % 60);
+                let ms = Math.floor((elapsed % 1000) / 100);
+                swDisplay.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${ms}`;
+            }, 100);
+        } else {
+            running = false;
+            swStart.textContent = 'スタート';
+            swStart.classList.remove('warning');
+            clearInterval(timer);
+            keepTimeInp.value = Math.round(elapsed / 1000);
+            keepTimeInp.dispatchEvent(new Event('input'));
+        }
+    };
+    swReset.onclick = () => {
+        running = false;
+        swStart.textContent = 'スタート';
+        swStart.classList.remove('warning');
+        clearInterval(timer);
+        elapsed = 0;
+        swDisplay.textContent = '00:00.0';
+        keepTimeInp.value = 0;
+        keepTimeInp.dispatchEvent(new Event('input'));
+    };
+
+    document.getElementById('btn-save-game').onclick = () => {
+        if(running) swStart.click();
+        const opponent = document.getElementById('opponent').value.trim() || '未入力';
+        const gameData = {
+            opponent,
+            result: resSel.value,
+            myInner: myInp.value || 0,
+            oppInner: oppInp.value || 0,
+            keepTime: keepTimeInp.value || 0,
+            memo: document.getElementById('game-memo').value,
+            stats: JSON.parse(JSON.stringify(playerStats))
+        };
+
+        if(editingIndex >= 0) {
+            savedGames[editingIndex] = gameData;
+            alert('試合データを更新しました');
+        } else {
+            savedGames.push(gameData);
+            alert('試合データを保存しました');
+        }
+
+        localStorage.setItem('ios_dodgeball_games_v6', JSON.stringify(savedGames));
+        clearNextGameStats();
+        updateSavedUI();
+    };
+
+    function clearNextGameStats() {
+        editingIndex = -1;
+        document.getElementById('form-title').textContent = '試合基本情報';
+        document.getElementById('btn-save-game').textContent = 'この試合を保存して次へ';
+        document.getElementById('btn-cancel-edit').style.display = 'none';
+        document.getElementById('opponent').value = '';
+        myInp.value = 0; myInp.dispatchEvent(new Event('input'));
+        oppInp.value = 0; oppInp.dispatchEvent(new Event('input'));
+        keepTimeInp.value = 0; keepTimeInp.dispatchEvent(new Event('input'));
+        document.getElementById('game-memo').value = '';
+        swReset.click();
+
+        for(let i=1; i<=20; i++) {
+            playerStats[i].innerAT = {success:0, fail:0};
+            playerStats[i].outerAT = {success:0, fail:0};
+            playerStats[i].df = {success:0, fail:0};
+            playerStats[i].details = {
+                innerAT: { success: { 正面:0, 足元:0, 肩:0, 腕:0 }, fail: { 正面:0, 足元:0, 肩:0, 腕:0, ワンバン:0, カット:0, パスミス:0, ヘッド:0 } },
+                outerAT: { success: { 正面:0, 足元:0, 肩:0, 腕:0 }, fail: { 正面:0, 足元:0, 肩:0, 腕:0, ワンバン:0, カット:0, パスミス:0, ヘッド:0 } },
+                df: { success: { 正面:0, 足元:0, 肩:0, 腕:0, ヘッド:0 }, fail: { 正面:0, 足元:0, 肩:0, 腕:0 } }
+            };
+            playerStats[i].isPlaying = false;
+
+            const cardEl = document.querySelector(`#players-container .ios-card:nth-child(${i})`);
+            if(cardEl) {
+                const checkboxes = cardEl.querySelectorAll('.player-toggles input[type="checkbox"]');
+                checkboxes[0].checked = false;
+            }
+
+            ['innerAT','outerAT','df'].forEach(c => {
+                document.getElementById(`p-${i}-${c}-success`).textContent = '0';
+                document.getElementById(`p-${i}-${c}-fail`).textContent = '0';
+            });
+        }
+    }
+
+    function fullResetForm() {
+        clearNextGameStats();
+        for(let i=1; i<=20; i++) {
+            playerStats[i].name = '';
+            playerStats[i].isSpecial = false;
+            const cardEl = document.querySelector(`#players-container .ios-card:nth-child(${i})`);
+            if(cardEl) {
+                cardEl.querySelector('.player-name-input').value = '';
+                const checkboxes = cardEl.querySelectorAll('.player-toggles input[type="checkbox"]');
+                checkboxes[0].checked = false;
+                checkboxes[1].checked = false;
+                const starLabel = cardEl.querySelector(`#star-label-${i}`);
+                if(starLabel) starLabel.classList.remove('active-star');
+            }
+        }
+        savedNames = {};
+        localStorage.removeItem('ios_dodgeball_names_v6');
+    }
+
+    document.getElementById('btn-cancel-edit').onclick = fullResetForm;
+    document.getElementById('btn-reset-screen').onclick = () => {
+        if(confirm('選手名も含めて入力をすべてリセットしますか？')) fullResetForm();
+    };
+    document.getElementById('btn-clear-all').onclick = () => {
+        if(savedGames.length && confirm('すべての保存データを消去しますか？')) {
+            savedGames = [];
+            localStorage.removeItem('ios_dodgeball_games_v6');
+            updateSavedUI();
+        }
+    };
+
+    function updateSavedUI() {
+        const container = document.getElementById('saved-games-container');
+        const teamCsvBtn = document.getElementById('btn-export-team-csv');
+        const detailCsvBtn = document.getElementById('btn-export-detail-csv');
+
+        if(savedGames.length === 0) {
+            container.innerHTML = '<div style="color: var(--ios-secondary); text-align: center; font-size: 0.8rem; padding: 10px;">記録なし</div>';
+            teamCsvBtn.disabled = true;
+            teamCsvBtn.textContent = '全体スタッツ出力 (0件)';
+            detailCsvBtn.disabled = true;
+            detailCsvBtn.textContent = '個人詳細出力 (0件)';
+            return;
+        }
+        container.innerHTML = '';
+        savedGames.forEach((g, idx) => {
+            const div = document.createElement('div');
+            div.className = 'saved-item';
+            let bClass = g.result === '勝' ? 'badge-win' : (g.result === '負' ? 'badge-lose' : 'badge-draw');
+            div.innerHTML = `
+                <div><strong>#${idx+1}</strong> vs ${escapeHtml(g.opponent)} <span class="badge ${bClass}">${g.result}</span></div>
+                <div style="display:flex;gap:4px;">
+                    <button class="ios-btn secondary" style="padding:2px 8px;font-size:0.75rem;" onclick="editGame(${idx})">編集</button>
+                    <button class="ios-btn danger" style="padding:2px 8px;font-size:0.75rem;" onclick="deleteGame(${idx})">削除</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+
+        teamCsvBtn.disabled = false;
+        teamCsvBtn.textContent = `全体スタッツ出力 (${savedGames.length}件)`;
+        detailCsvBtn.disabled = false;
+        detailCsvBtn.textContent = `個人詳細出力 (${savedGames.length}件)`;
+    }
+
+    function deleteGame(idx) {
+        if(confirm(`第 ${idx+1} 試合を削除しますか？`)) {
+            savedGames.splice(idx, 1);
+            localStorage.setItem('ios_dodgeball_games_v6', JSON.stringify(savedGames));
+            updateSavedUI();
+        }
+    }
+
+    function editGame(idx) {
+        const g = savedGames[idx];
+        editingIndex = idx;
+        document.getElementById('form-title').textContent = `試合基本情報 (第 ${idx+1} 試合編集中)`;
+        document.getElementById('btn-save-game').textContent = '上書き保存する';
+        document.getElementById('btn-cancel-edit').style.display = 'block';
+
+        document.getElementById('opponent').value = g.opponent;
+        resSel.value = g.result;
+        myInp.value = g.myInner; myInp.dispatchEvent(new Event('input'));
+        oppInp.value = g.oppInner; oppInp.dispatchEvent(new Event('input'));
+        keepTimeInp.value = g.keepTime; keepTimeInp.dispatchEvent(new Event('input'));
+        document.getElementById('game-memo').value = g.memo || '';
+
+        for(let i=1; i<=20; i++) {
+            if(g.stats && g.stats[i]) {
+                const st = g.stats[i];
+                playerStats[i] = JSON.parse(JSON.stringify(st));
+                const cardEl = document.querySelector(`#players-container .ios-card:nth-child(${i})`);
+                if(cardEl) {
+                    cardEl.querySelector('.player-name-input').value = st.name || '';
+                    const checkboxes = cardEl.querySelectorAll('.player-toggles input[type="checkbox"]');
+                    checkboxes[0].checked = st.isPlaying;
+                    checkboxes[1].checked = st.isSpecial;
+                    const starLabel = cardEl.querySelector(`#star-label-${i}`);
+                    if(st.isSpecial) starLabel.classList.add('active-star');
+                    else starLabel.classList.remove('active-star');
+                }
+                
+                ['innerAT','outerAT','df'].forEach(c => {
+                    document.getElementById(`p-${i}-${c}-success`).textContent = st[c].success;
+                    document.getElementById(`p-${i}-${c}-fail`).textContent = st[c].fail;
+                });
+            }
+        }
+        window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[&<>"']/g, c => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[c]));
+    }
+
+    function sanitizeCsvField(v) {
+        v = String(v ?? '');
+        return /^[=+\-@]/.test(v) ? "'" + v : v;
+    }
+
+    function downloadCSV(filename, content) {
+        const blob = new Blob([content], {type: 'text/csv;charset=utf-8;'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    // 全体スタッツCSV出力ボタン
+    document.getElementById('btn-export-team-csv').onclick = () => {
+        let teamLines = ['\uFEFF'];
+        savedGames.forEach((g, idx) => {
+            const gameNum = idx + 1;
+            teamLines.push(`【第 ${gameNum} 試合 全体スタッツ】`);
+            teamLines.push(`対戦相手,${sanitizeCsvField(g.opponent)}`);
+            teamLines.push(`結果,${g.myInner}-${g.oppInner} (${g.result})`);
+            teamLines.push(`ボールキープ時間,${g.keepTime}秒`);
+            teamLines.push(`備考,"${sanitizeCsvField(g.memo||'').replace(/"/g,'""')}"`);
+            teamLines.push('');
+            teamLines.push(',,DF,DF,内野AT,内野AT,外野AT,外野AT');
+            teamLines.push('背番号,選手名,○,×,○,×,○,×');
+
+            for (let i = 1; i <= 20; i++) {
+                const st = g.stats[i];
+                const trimmedName = (st.name || '').trim();
+                if (trimmedName === '') continue;
+
+                const nameEscaped = `"${sanitizeCsvField(trimmedName).replace(/"/g, '""')}"`;
+                if (!st.isPlaying) {
+                    teamLines.push(`${i},${nameEscaped},-,-,-,-,-,-`);
+                } else {
+                    teamLines.push(`${i},${nameEscaped},${st.df.success},${st.df.fail},${st.innerAT.success},${st.innerAT.fail},${st.outerAT.success},${st.outerAT.fail}`);
+                }
+            }
+            teamLines.push('');
+            teamLines.push('--------------------------------------------------');
+            teamLines.push('');
+        });
+        downloadCSV('dodgeball_team_stats.csv', teamLines.join('\r\n'));
+    };
+
+    // 個人詳細データCSV出力ボタン（試合基本情報を追加）
+    document.getElementById('btn-export-detail-csv').onclick = () => {
+        let detailLines = ['\uFEFF'];
+        savedGames.forEach((g, idx) => {
+            const gameNum = idx + 1;
+            detailLines.push(`【第 ${gameNum} 試合 個人特化詳細データ】`);
+            detailLines.push(`対戦相手,${sanitizeCsvField(g.opponent)}`);
+            detailLines.push(`結果,${g.myInner}-${g.oppInner} (${g.result})`);
+            detailLines.push(`ボールキープ時間,${g.keepTime}秒`);
+            detailLines.push(`備考,"${sanitizeCsvField(g.memo||'').replace(/"/g,'""')}"`);
+            detailLines.push('');
+            detailLines.push('背番号,選手名,' +
+                'DF_正面(〇),DF_正面(×),DF_足元(〇),DF_足元(×),DF_肩(〇),DF_肩(×),DF_腕(〇),DF_腕(×),DF_ヘッド(〇),' +
+                '内野AT_正面(〇),内野AT_正面(×),内野AT_足元(〇),内野AT_足元(×),内野AT_肩(〇),内野AT_肩(×),内野AT_腕(〇),内野AT_腕(×),内野AT_ワンバン(×),内野AT_カット(×),内野AT_パスミス(×),内野AT_ヘッド(×),' +
+                '外野AT_正面(〇),外野AT_正面(×),外野AT_足元(〇),外野AT_足元(×),外野AT_肩(〇),外野AT_肩(×),外野AT_腕(〇),外野AT_腕(×),外野AT_ワンバン(×),外野AT_カット(×),外野AT_パスミス(×),外野AT_ヘッド(×)'
+            );
+
+            let specialCount = 0;
+            for (let i = 1; i <= 20; i++) {
+                const st = g.stats[i];
+                const trimmedName = (st.name || '').trim();
+                if (trimmedName === '') continue;
+
+                if (st.isPlaying && st.isSpecial) {
+                    specialCount++;
+                    const nameEscaped = `"${sanitizeCsvField(trimmedName).replace(/"/g, '""')}"`;
+                    const df_s = st.details.df.success;
+                    const df_f = st.details.df.fail;
+                    const in_s = st.details.innerAT.success;
+                    const in_f = st.details.innerAT.fail;
+                    const out_s = st.details.outerAT.success;
+                    const out_f = st.details.outerAT.fail;
+
+                    const rowVals = [
+                        i,
+                        nameEscaped,
+                        df_s['正面']||0, df_f['正面']||0, df_s['足元']||0, df_f['足元']||0, df_s['肩']||0, df_f['肩']||0, df_s['腕']||0, df_f['腕']||0, df_s['ヘッド']||0,
+                        in_s['正面']||0, in_f['正面']||0, in_s['足元']||0, in_f['足元']||0, in_s['肩']||0, in_f['肩']||0, in_s['腕']||0, in_f['腕']||0, in_f['ワンバン']||0, in_f['カット']||0, in_f['パスミス']||0, in_f['ヘッド']||0,
+                        out_s['正面']||0, out_f['正面']||0, out_s['足元']||0, out_f['足元']||0, out_s['肩']||0, out_f['肩']||0, out_s['腕']||0, out_f['腕']||0, out_f['ワンバン']||0, out_f['カット']||0, out_f['パスミス']||0, out_f['ヘッド']||0
+                    ];
+                    detailLines.push(rowVals.join(','));
+                }
+            }
+            if (specialCount === 0) {
+                detailLines.push('※この試合で詳細記録の対象選手はいません');
+            }
+
+            detailLines.push('');
+            detailLines.push('--------------------------------------------------');
+            detailLines.push('');
+        });
+        downloadCSV('dodgeball_detail_stats.csv', detailLines.join('\r\n'));
+    };
+
+    updateSavedUI();
+</script>
+
+</body>
+</html>
